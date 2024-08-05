@@ -13,8 +13,10 @@ PacketQueue::PacketQueue(const char* queueNameParam) {
 }
 
 void PacketQueue::init() {
+    // 初始化互斥锁
 	int initLockCode = pthread_mutex_init(&mLock, NULL);
 //	LOGI("initLockCode is %d", initLockCode);
+    // 初始化条件锁
 	int initConditionCode = pthread_cond_init(&mCondition, NULL);
 //	LOGI("initConditionCode is %d", initConditionCode);
 	mNbPackets = 0;

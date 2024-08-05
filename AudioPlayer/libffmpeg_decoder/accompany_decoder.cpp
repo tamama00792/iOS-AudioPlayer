@@ -16,13 +16,22 @@ AccompanyDecoder::~AccompanyDecoder() {
 	}
 }
 
+/// 获取采样率和比特率
+/// - Parameters:
+///   - fileString: 文件路径
+///   - metaData: 存储信息用的数组
 int AccompanyDecoder::getMusicMeta(const char* fileString, int * metaData) {
+    // 读取文件信息并初始化
 	init(fileString);
+    // 获取采样率
 	int sampleRate = avCodecContext->sample_rate;
 	LOGI("sampleRate is %d", sampleRate);
+    // 获取比特率
 	int bitRate = avCodecContext->bit_rate;
 	LOGI("bitRate is %d", bitRate);
+    // 销毁当前解码器
 	destroy();
+    // 存储采样率和比特率
 	metaData[0] = sampleRate;
 	metaData[1] = bitRate;
 	return 0;

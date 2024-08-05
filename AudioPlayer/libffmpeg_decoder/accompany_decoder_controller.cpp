@@ -16,11 +16,13 @@ AccompanyDecoderController::~AccompanyDecoderController() {
 }
 
 int AccompanyDecoderController::getMusicMeta(const char* accompanyPath, int * accompanyMetaData) {
-	//获取伴奏的meta
-	AccompanyDecoder* accompanyDecoder = new AccompanyDecoder();
-	accompanyDecoder->getMusicMeta(accompanyPath, accompanyMetaData);
+	// 创建临时的解码器
+    AccompanyDecoder* accompanyDecoder = new AccompanyDecoder();
+    //获取伴奏的meta，包含采样率和比特率
+    accompanyDecoder->getMusicMeta(accompanyPath, accompanyMetaData);
+    // 销毁临时的解码器
 	delete accompanyDecoder;
-	//初始化伴奏的采样率
+	// 初始化伴奏的采样率
 	accompanySampleRate = accompanyMetaData[0];
 //	LOGI("accompanySampleRate is %d", accompanySampleRate);
 	return 0;
@@ -96,8 +98,9 @@ void AccompanyDecoderController::init(const char* accompanyPath, float packetBuf
 	accompanyMax = 1.0f;
 
     int meta[2];
+    // 获取采样率和比特率
     this->getMusicMeta(accompanyPath, meta);
-	//计算计算出伴奏和原唱的bufferSize
+	// 根据采样率计算出伴奏和原唱的bufferSize
 	int accompanyByteCountPerSec = accompanySampleRate * CHANNEL_PER_FRAME * BITS_PER_CHANNEL / BITS_PER_BYTE;
 	accompanyPacketBufferSize = (int) ((accompanyByteCountPerSec / 2) * packetBufferTimePercent);
 
@@ -106,17 +109,26 @@ void AccompanyDecoderController::init(const char* accompanyPath, float packetBuf
 	initAccompanyDecoder(accompanyPath);
 	//初始化队列以及开启线程
 	packetPool = PacketPool::GetInstance();
+    // 初始化队列
 	packetPool->initDecoderAccompanyPacketQueue();
+    // 初始化解码线程
 	initDecoderThread();
 }
 
 void AccompanyDecoderController::initDecoderThread() {
+    // 设置正在运行
 	isRunning = true;
+    // 设置解码没有被暂停的标记
 	isDecodePausingFlag = false;
+    // 初始化互斥锁
 	pthread_mutex_init(&mLock, NULL);
+    // 初始化条件锁
 	pthread_cond_init(&mCondition, NULL);
+    // 初始化解码暂停的互斥锁
 	pthread_mutex_init(&mDecodePausingLock, NULL);
+    // 初始化解码暂停的条件锁
 	pthread_cond_init(&mDecodePausingCondition, NULL);
+    // 创建线程，并设置线程开始时执行的线程
 	pthread_create(&songDecoderThread, NULL, startDecoderThread, this);
 }
 

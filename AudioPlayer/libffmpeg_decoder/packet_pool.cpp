@@ -57,6 +57,7 @@ void PacketPool::clearDecoderOriginalSongPacketToQueue() {
 /**************************start decoder accompany packet queue process*******************************************/
 void PacketPool::initDecoderAccompanyPacketQueue() {
 	const char* name = "decoder accompany packet queue";
+    // 初始化队列
 	decoderAccompanyPacketQueue = new PacketQueue(name);
 }
 
