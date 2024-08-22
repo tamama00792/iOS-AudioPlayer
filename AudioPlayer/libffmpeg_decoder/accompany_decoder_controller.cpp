@@ -36,7 +36,7 @@ float AccompanyDecoderController::seekToPosition(float position){
 	LOGI("enter AccompanyDecoderController::seekToPosition() position=%f", position);
 	float actualSeekPosition = -1;
 	if (NULL != accompanyDecoder) {
-		//stop decoder thread
+		//暂停解码线程
 		pthread_mutex_lock(&mDecodePausingLock);
 		pthread_mutex_lock(&mLock);
 		isDecodePausingFlag = true;
@@ -65,22 +65,32 @@ float AccompanyDecoderController::seekToPosition(float position){
 void* AccompanyDecoderController::startDecoderThread(void* ptr) {
 	LOGI("enter AccompanyDecoderController::startDecoderThread");
 	AccompanyDecoderController* decoderController = (AccompanyDecoderController *) ptr;
+	//上普通的互斥锁
 	int getLockCode = pthread_mutex_lock(&decoderController->mLock);
+	// 当还在执行任务的时候，持续循环
 	while (decoderController->isRunning) {
+	    // 如果标记了解码暂停
 		if (decoderController->isDecodePausingFlag) {
+		    // 上暂停相关的互斥锁
 			pthread_mutex_lock(&decoderController->mDecodePausingLock);
+			// 释放暂停相关的条件锁
 			pthread_cond_signal(&decoderController->mDecodePausingCondition);
+			// 释放暂停相关的互斥锁
 			pthread_mutex_unlock(&decoderController->mDecodePausingLock);
-
+            // 等待普通的条件锁满足后释放普通锁
 			pthread_cond_wait(&decoderController->mCondition, &decoderController->mLock);
 		}
 		else {
+		    // 解码
 			decoderController->decodeSongPacket();
+			// 如果解码后的包队列大于阈值
 			if (decoderController->packetPool->geDecoderAccompanyPacketQueueSize() > QUEUE_SIZE_MAX_THRESHOLD) {
+			    // 等待普通的条件锁满足后释放普通锁
 				pthread_cond_wait(&decoderController->mCondition, &decoderController->mLock);
 			}
 		}
 	}
+	// 释放普通锁
 	pthread_mutex_unlock(&decoderController->mLock);
     return 0;
 }
@@ -136,8 +146,11 @@ void AccompanyDecoderController::initDecoderThread() {
 void AccompanyDecoderController::decodeSongPacket() {
 //	LOGI("start AccompanyDecoderController::decodeSongPacket");
 //	long readLatestFrameTimemills = getCurrentTime();
+    // 解码
 	AudioPacket* accompanyPacket = accompanyDecoder->decodePacket();
+	// 设置包状态为播放
 	accompanyPacket->action = AudioPacket::AUDIO_PACKET_ACTION_PLAY;
+	// 将包放到队列中
 	packetPool->pushDecoderAccompanyPacketToQueue(accompanyPacket);
 //	LOGI("decode accompany Packet waste time mills is %d", (getCurrentTime() - readLatestFrameTimemills));
 }
@@ -165,15 +178,21 @@ int AccompanyDecoderController::readSamples(short* samples, int size) {
 	int result = -1;
     int fillCuror = 0;
     int sampleCursor = 0;
+    // 持续工作，直到产出了指定大小
     while(fillCuror < size) {
         int samplePacketSize = 0;
+        // 如果已经完成当前包的解码则清理指针
         if(currentAccompanyPacket && currentAccompanyPacketCursor == currentAccompanyPacket->size) {
             delete currentAccompanyPacket;
             currentAccompanyPacket = NULL;
         }
+        // 如果还未完成当前包的解码
         if(currentAccompanyPacket && currentAccompanyPacketCursor < currentAccompanyPacket->size) {
+            // 算出剩余长度
             int subSize = size - fillCuror;
+            // 算出合适的可存放空间大小
             samplePacketSize = MIN(currentAccompanyPacket->size - currentAccompanyPacketCursor, subSize);
+            
             memcpy(samples + fillCuror, currentAccompanyPacket->buffer + currentAccompanyPacketCursor, samplePacketSize * 2);
         } else {
             packetPool->getDecoderAccompanyPacket(&currentAccompanyPacket, true);
