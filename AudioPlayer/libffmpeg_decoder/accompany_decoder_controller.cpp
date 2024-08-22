@@ -98,7 +98,9 @@ void* AccompanyDecoderController::startDecoderThread(void* ptr) {
 void AccompanyDecoderController::initAccompanyDecoder(const char* accompanyPath) {
 	//	LOGI("accompanyByteCountPerSec is %d packetBufferTimePercent is %f accompanyPacketBufferSize is %d", accompanyByteCountPerSec, packetBufferTimePercent, accompanyPacketBufferSize);
 	//初始化两个decoder
+    // 构建解码器
 	accompanyDecoder = new AccompanyDecoder();
+    // 初始化解码器
 	accompanyDecoder->init(accompanyPath, accompanyPacketBufferSize);
 }
 
@@ -115,9 +117,9 @@ void AccompanyDecoderController::init(const char* accompanyPath, float packetBuf
 	accompanyPacketBufferSize = (int) ((accompanyByteCountPerSec / 2) * packetBufferTimePercent);
 
 //	LOGI("accompanyByteCountPerSec is %d packetBufferTimePercent is %f accompanyPacketBufferSize is %d", accompanyByteCountPerSec, packetBufferTimePercent, accompanyPacketBufferSize);
-	//初始化两个decoder
+	//初始化解码器
 	initAccompanyDecoder(accompanyPath);
-	//初始化队列以及开启线程
+	// 获取队列实例
 	packetPool = PacketPool::GetInstance();
     // 初始化队列
 	packetPool->initDecoderAccompanyPacketQueue();
@@ -138,7 +140,7 @@ void AccompanyDecoderController::initDecoderThread() {
 	pthread_mutex_init(&mDecodePausingLock, NULL);
     // 初始化解码暂停的条件锁
 	pthread_cond_init(&mDecodePausingCondition, NULL);
-    // 创建线程，并设置线程开始时执行的线程
+    // 创建线程，并设置线程开始时执行的函数
 	pthread_create(&songDecoderThread, NULL, startDecoderThread, this);
 }
 
@@ -157,20 +159,33 @@ void AccompanyDecoderController::decodeSongPacket() {
 
 void AccompanyDecoderController::destroyDecoderThread() {
 //	LOGI("enter AccompanyDecoderController::destoryProduceThread ....");
+    // 设置当前没有运行
 	isRunning = false;
+    // 设置解码没有被暂停的标记
 	isDecodePausingFlag = false;
 	void* status;
+    // 上互斥锁
 	int getLockCode = pthread_mutex_lock(&mLock);
+    // 告知条件锁满足条件，可释放
 	pthread_cond_signal (&mCondition);
+    // 释放互斥锁
 	pthread_mutex_unlock (&mLock);
+    // 等待解码线程结束并获取状态
 	pthread_join(songDecoderThread, &status);
+    // 销毁互斥锁
 	pthread_mutex_destroy(&mLock);
+    // 销毁条件锁
 	pthread_cond_destroy(&mCondition);
 
+    // 上解码暂停的互斥锁
 	pthread_mutex_lock(&mDecodePausingLock);
+    // 告知解码暂停的条件锁满足条件，可释放
 	pthread_cond_signal(&mDecodePausingCondition);
+    // 释放解码暂停的互斥锁
 	pthread_mutex_unlock(&mDecodePausingLock);
+    // 销毁解码暂停的互斥锁
 	pthread_mutex_destroy(&mDecodePausingLock);
+    // 销毁解码暂停的条件锁
 	pthread_cond_destroy(&mDecodePausingCondition);
 }
 
@@ -220,9 +235,13 @@ int AccompanyDecoderController::readSamples(short* samples, int size) {
 }
 
 void AccompanyDecoderController::destroy() {
+    // 销毁解码线程
 	destroyDecoderThread();
+    // 终止解码队列
 	packetPool->abortDecoderAccompanyPacketQueue();
+    // 销毁解码队列
 	packetPool->destoryDecoderAccompanyPacketQueue();
+    // 销毁解码器
 	if (NULL != accompanyDecoder) {
 		accompanyDecoder->destroy();
 		delete accompanyDecoder;

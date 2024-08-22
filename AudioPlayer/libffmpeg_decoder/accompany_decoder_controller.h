@@ -80,6 +80,7 @@ public:
 
     int getChannels() {
         int channels = -1;
+        // 如果存在解码器，则返回解码器取到的通道数
         if(accompanyDecoder) {
             channels = accompanyDecoder->getChannels();
         }
@@ -87,6 +88,7 @@ public:
     };
     int getAudioSampleRate() {
         int audioSampleRate = -1;
+        // 如果存在解码器，则返回解码器取到的采样率
         if(accompanyDecoder) {
             audioSampleRate = accompanyDecoder->getAudioSampleRate();
         }
